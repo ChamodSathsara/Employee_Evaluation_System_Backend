@@ -3,7 +3,8 @@ using DocumentFormat.OpenXml.Spreadsheet;
 using EmployeeEvaluationSystem.DTOs;
 using EmployeeEvaluationSystem.Helpers;
 using EmployeeEvaluationSystem.Models;
-using EmployeeEvaluationSystem.Repositories;
+using EmployeeEvaluationSystem.Repositories.Interfaces;
+using EmployeeEvaluationSystem.Services.Interfaces;
 using Microsoft.Extensions.Configuration;
 
 namespace EmployeeEvaluationSystem.Services;

@@ -1,5 +1,6 @@
 using EmployeeEvaluationSystem.Data;
 using EmployeeEvaluationSystem.Models;
+using EmployeeEvaluationSystem.Repositories.Interfaces;
 
 namespace EmployeeEvaluationSystem.Repositories;
 

@@ -1,6 +1,7 @@
 using EmployeeEvaluationSystem.DTOs;
 using EmployeeEvaluationSystem.Helpers;
-using EmployeeEvaluationSystem.Repositories;
+using EmployeeEvaluationSystem.Repositories.Interfaces;
+using EmployeeEvaluationSystem.Services.Interfaces;
 
 namespace EmployeeEvaluationSystem.Services;
 

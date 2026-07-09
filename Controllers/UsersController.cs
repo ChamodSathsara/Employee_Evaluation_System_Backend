@@ -1,6 +1,6 @@
 using EmployeeEvaluationSystem.DTOs;
 using EmployeeEvaluationSystem.Helpers;
-using EmployeeEvaluationSystem.Services;
+using EmployeeEvaluationSystem.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
