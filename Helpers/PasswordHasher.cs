@@ -1,0 +1,30 @@
+namespace EmployeeEvaluationSystem.Helpers;
+
+/// <summary>
+/// BCrypt-based password hasher. BCrypt embeds its own salt and work factor into the
+/// resulting hash string, so no separate salt column is required on the Users table.
+/// </summary>
+public class PasswordHasher : IPasswordHasher
+{
+    private const int WorkFactor = 12;
+
+    public string Hash(string password)
+    {
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            throw new ArgumentException("Password cannot be empty.", nameof(password));
+        }
+
+        return BCrypt.Net.BCrypt.HashPassword(password, WorkFactor);
+    }
+
+    public bool Verify(string password, string passwordHash)
+    {
+        if (string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(passwordHash))
+        {
+            return false;
+        }
+
+        return BCrypt.Net.BCrypt.Verify(password, passwordHash);
+    }
+}
