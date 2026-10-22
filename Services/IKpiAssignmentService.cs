@@ -14,7 +14,7 @@ public interface IKpiAssignmentService
     /// <summary>Replaces the line items of a Draft KPI assignment. Only the original creator may edit, and only while Status = Draft.</summary>
     Task<KpiAssignmentDto> UpdateAsync(int callerId, int assignmentId, UpdateKpiAssignmentDto request);
 
-    /// <summary>Deletes a Draft KPI assignment. Only the original creator may delete, and only while Status = Draft with no evaluations started.</summary>
+    /// <summary>Deletes a Draft or Published KPI assignment. Only the original creator may delete, and only when no evaluations have started.</summary>
     Task DeleteAsync(int callerId, int assignmentId);
 
     /// <summary>Transitions Draft -> Published, making the KPI set visible to the employee and locking it from further edits.</summary>

@@ -118,7 +118,7 @@ public class KpiAssignmentService : IKpiAssignmentService
         var assignment = await _kpiAssignmentRepository.GetByIdAsync(assignmentId)
             ?? throw new NotFoundException("KPI Assignment", assignmentId);
 
-        EnsureCreatorAndDraft(assignment, callerId, "delete");
+        EnsureCreatorAndDeletableStatus(assignment, callerId);
 
         if (await _kpiAssignmentRepository.HasEvaluationsAsync(assignmentId))
         {
@@ -330,6 +330,20 @@ public class KpiAssignmentService : IKpiAssignmentService
         if (assignment.Status != StatusDraft)
         {
             throw new ConflictException("Published KPIs cannot be edited. Revert the assignment to Draft first if changes are required.");
+        }
+    }
+
+    private static void EnsureCreatorAndDeletableStatus(KPIAssignment assignment, int callerId)
+    {
+        if (assignment.CreatedBy != callerId)
+        {
+            throw new ForbiddenException("Only the creator of this KPI assignment can delete it.");
+        }
+
+        if (assignment.Status is not StatusDraft and not StatusPublished)
+        {
+            throw new ConflictException(
+                $"A KPI assignment with status '{assignment.Status}' cannot be deleted.");
         }
     }
 
