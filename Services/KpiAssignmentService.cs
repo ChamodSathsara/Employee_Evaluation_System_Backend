@@ -21,6 +21,7 @@ public class KpiAssignmentService : IKpiAssignmentService
     private readonly IEvaluationPeriodRepository _evaluationPeriodRepository;
     private readonly INotificationRepository _notificationRepository;
     private readonly IAuditLogRepository _auditLogRepository;
+    private readonly IEmailService _emailService;
     private readonly IMapper _mapper;
 
     public KpiAssignmentService(
@@ -29,6 +30,7 @@ public class KpiAssignmentService : IKpiAssignmentService
         IEvaluationPeriodRepository evaluationPeriodRepository,
         INotificationRepository notificationRepository,
         IAuditLogRepository auditLogRepository,
+        IEmailService emailService,
         IMapper mapper)
     {
         _kpiAssignmentRepository = kpiAssignmentRepository;
@@ -36,6 +38,7 @@ public class KpiAssignmentService : IKpiAssignmentService
         _evaluationPeriodRepository = evaluationPeriodRepository;
         _notificationRepository = notificationRepository;
         _auditLogRepository = auditLogRepository;
+        _emailService = emailService;
         _mapper = mapper;
     }
 
@@ -224,6 +227,11 @@ public class KpiAssignmentService : IKpiAssignmentService
         });
 
         await _kpiAssignmentRepository.SaveChangesAsync();
+
+        await _emailService.SendKpiPublishedAsync(
+            assignment.Employee.Email,
+            $"{assignment.Employee.FirstName} {assignment.Employee.LastName}".Trim(),
+            assignment.Period.Name);
 
         return _mapper.Map<KpiAssignmentDto>(assignment);
     }
