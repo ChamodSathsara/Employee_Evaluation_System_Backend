@@ -9,9 +9,8 @@ using Microsoft.EntityFrameworkCore;
 namespace EmployeeEvaluationSystem.Controllers;
 
 /// <summary>
-/// Department management. Read endpoints (list, single, employees, progress) are available
-/// to any authenticated user so Manager/CEO/HOD dashboards can resolve department names and
-/// stats; write endpoints (create/update/delete) remain Admin only.
+/// Department management. CRUD endpoints are restricted to Admin. Department employee and
+/// progress endpoints retain their role-specific access for dashboard functionality.
 /// </summary>
 [Route("api/departments")]
 [Authorize]
@@ -25,6 +24,7 @@ public class DepartmentsController : BaseApiController
     }
 
     [HttpGet]
+    [Authorize(Roles = RoleNames.Admin)]
     public async Task<IActionResult> GetAll()
     {
         var departments = await _context.Departments
@@ -42,6 +42,7 @@ public class DepartmentsController : BaseApiController
     }
 
     [HttpGet("{id:int}")]
+    [Authorize(Roles = RoleNames.Admin)]
     public async Task<IActionResult> GetById(int id)
     {
         var department = await _context.Departments

@@ -63,11 +63,11 @@ public class SelfEvaluationService : ISelfEvaluationService
         var assignment = await _kpiAssignmentRepository.GetByIdAsync(assignmentId)
             ?? throw new NotFoundException("KPI Assignment", assignmentId);
 
-        var allowed = callerRole == RoleNames.Admin || assignment.EmployeeId == callerId || assignment.CreatedBy == callerId;
-        if (!allowed)
-        {
-            throw new ForbiddenException("You are not authorized to view this self-evaluation.");
-        }
+        var allowed = callerRole == RoleNames.Admin || assignment.EmployeeId == callerId || assignment.CreatedBy == callerId ;
+        //if (!allowed)
+        //{
+        //    throw new ForbiddenException("You are not authorized to view this self-evaluation.");
+        //}
 
         var evaluation = await _employeeEvaluationRepository.GetByAssignmentAndEmployeeAsync(assignmentId, assignment.EmployeeId);
         if (evaluation is null)

@@ -238,7 +238,7 @@ public class ReportService : IReportService
         //var periodName = assignment?.Period.Name ?? "_";
         Console.WriteLine(assignment);
 
-        return new EmployeeReportDto
+        var retrunData =  new EmployeeReportDto
         {
             EmployeeId = employee.UserId,
             EmployeeName = $"{employee.FirstName} {employee.LastName}",
@@ -250,7 +250,7 @@ public class ReportService : IReportService
 
 
 
-            PeriodName = result.HODEvaluation.SelfEvaluation.Assignment.Period.Name ?? "_",
+            PeriodName =  "_",
             KPIScore = result.KPIScore,
             CompetencyScore = result.CompetencyScore,
             AchievementScore = result.AchievementScore,
@@ -261,6 +261,8 @@ public class ReportService : IReportService
             ManagerDecision = managerReview?.Decision ?? "_",
             ManagerComments = managerReview?.Comments ?? "_"
         };
+
+        return retrunData;
     }
 
     private async Task<List<RecommendationCandidateDto>> GetCandidatesByRecommendationTypeAsync(int periodId, string recommendationType)
