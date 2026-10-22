@@ -49,6 +49,18 @@ public class CreateKpiAssignmentDto
     public List<CreateKpiAssignmentDetailDto> Details { get; set; } = new();
 }
 
+public class BulkCreateKpiAssignmentDto
+{
+    [Required, MinLength(1, ErrorMessage = "At least one employee must be selected.")]
+    public List<int> EmployeeIds { get; set; } = new();
+
+    [Required]
+    public int PeriodId { get; set; }
+
+    [Required, MinLength(1, ErrorMessage = "At least one KPI line item is required.")]
+    public List<CreateKpiAssignmentDetailDto> Details { get; set; } = new();
+}
+
 public class UpdateKpiAssignmentDto
 {
     [Required, MinLength(1, ErrorMessage = "At least one KPI line item is required.")]

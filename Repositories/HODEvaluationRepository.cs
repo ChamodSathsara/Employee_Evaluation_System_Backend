@@ -15,6 +15,7 @@ public class HODEvaluationRepository : GenericRepository<HODEvaluation>, IHODEva
         return await Context.HodEvaluations
             .Include(h => h.HOD)
             .Include(h => h.SelfEvaluation).ThenInclude(e => e.Employee)
+            .Include(h => h.SelfEvaluation).ThenInclude(e => e.Assignment)
             .Include(h => h.SelfEvaluation).ThenInclude(e => e.Details)
             .Include(h => h.SelfEvaluation).ThenInclude(e => e.SupervisorEvaluations).ThenInclude(s => s.Details)
             .Include(h => h.Details).ThenInclude(d => d.KpiAssignmentDetail)

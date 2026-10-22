@@ -12,8 +12,9 @@ public class AttendanceSummaryRepository : GenericRepository<AttendanceSummary>,
 
     public async Task<AttendanceSummary?> GetByEmployeeAndPeriodAsync(int employeeId, int periodId)
     {
-        return await Context.AttendanceSummaries
+        var temp = await Context.AttendanceSummaries
             .FirstOrDefaultAsync(a => a.EmployeeId == employeeId && a.PeriodId == periodId);
+        return temp;
     }
 
     public async Task<List<AttendanceSummary>> GetByEmployeeAsync(int employeeId)

@@ -89,6 +89,79 @@ public class KpiAssignmentService : IKpiAssignmentService
         return _mapper.Map<KpiAssignmentDto>(created!);
     }
 
+    public async Task<List<KpiAssignmentDto>> BulkCreateAsync(int callerId, BulkCreateKpiAssignmentDto request)
+    {
+        var employeeIds = request.EmployeeIds.Distinct().ToList();
+        if (employeeIds.Count != request.EmployeeIds.Count)
+        {
+            throw new ValidationAppException("EmployeeIds must not contain duplicate values.");
+        }
+
+        ValidateTotalWeight(request.Details);
+
+        var creator = await _userRepository.GetByIdWithDetailsAsync(callerId)
+            ?? throw new NotFoundException("User", callerId);
+
+        var period = await _evaluationPeriodRepository.GetByIdAsync(request.PeriodId)
+            ?? throw new NotFoundException("Evaluation Period", request.PeriodId);
+
+        if (!string.Equals(period.Status, "Active", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ValidationAppException(
+                $"Evaluation period '{period.Name}' is not active. KPIs can only be created for an active period.");
+        }
+
+        var employees = new List<User>();
+        foreach (var employeeId in employeeIds)
+        {
+            var employee = await _userRepository.GetByIdWithDetailsAsync(employeeId)
+                ?? throw new NotFoundException("Employee", employeeId);
+
+            ValidateCreatorTargetRolePair(creator.Role.RoleName, employee.Role.RoleName);
+            ValidateDirectReport(creator, employee);
+
+            if (await _kpiAssignmentRepository.GetByEmployeeAndPeriodAsync(employeeId, request.PeriodId) is not null)
+            {
+                throw new ConflictException(
+                    $"A KPI assignment already exists for employee '{employee.FirstName} {employee.LastName}' in period '{period.Name}'.");
+            }
+
+            employees.Add(employee);
+        }
+
+        var assignments = employees.Select(employee => new KPIAssignment
+        {
+            EmployeeId = employee.UserId,
+            CreatedBy = callerId,
+            PeriodId = request.PeriodId,
+            Status = StatusDraft,
+            CreatedDate = DateTime.UtcNow,
+            Details = request.Details.Select(d => new KPIAssignmentDetail
+            {
+                KPIName = d.KPIName,
+                Description = d.Description,
+                WeightPercentage = d.WeightPercentage
+            }).ToList()
+        }).ToList();
+
+        foreach (var assignment in assignments)
+        {
+            await _kpiAssignmentRepository.AddAsync(assignment);
+            await LogAuditAsync(callerId, "Create", "KPIAssignments", assignment.AssignmentId);
+        }
+
+        await _kpiAssignmentRepository.SaveChangesAsync();
+
+        var createdAssignments = new List<KpiAssignmentDto>();
+        foreach (var assignment in assignments)
+        {
+            var created = await _kpiAssignmentRepository.GetByIdWithDetailsAsync(assignment.AssignmentId);
+            createdAssignments.Add(_mapper.Map<KpiAssignmentDto>(created!));
+        }
+
+        return createdAssignments;
+    }
+
     public async Task<KpiAssignmentDto> UpdateAsync(int callerId, int assignmentId, UpdateKpiAssignmentDto request)
     {
         var assignment = await _kpiAssignmentRepository.GetByIdWithDetailsAsync(assignmentId)

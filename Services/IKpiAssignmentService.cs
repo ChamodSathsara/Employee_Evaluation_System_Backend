@@ -10,6 +10,7 @@ public interface IKpiAssignmentService
     /// report to the creator, and the KPI line-item weights must sum to exactly 100%.
     /// </summary>
     Task<KpiAssignmentDto> CreateAsync(int callerId, CreateKpiAssignmentDto request);
+    Task<List<KpiAssignmentDto>> BulkCreateAsync(int callerId, BulkCreateKpiAssignmentDto request);
 
     /// <summary>Replaces the line items of a Draft KPI assignment. Only the original creator may edit, and only while Status = Draft.</summary>
     Task<KpiAssignmentDto> UpdateAsync(int callerId, int assignmentId, UpdateKpiAssignmentDto request);

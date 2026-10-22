@@ -30,10 +30,8 @@ public class GradeCalculationService : IGradeCalculationService
     private readonly IAuditLogRepository _auditLogRepository;
     private readonly ICurrentUserService _currentUserService;
     private readonly IMapper _mapper;
-    private readonly ISelfEvaluationService _selfEvaluationService;
 
     public GradeCalculationService(
-        ISelfEvaluationService selfEvaluationService,
         IHODEvaluationRepository hodEvaluationRepository,
         IEvaluationResultRepository evaluationResultRepository,
         ICompetencyEvaluationRepository competencyEvaluationRepository,
@@ -51,7 +49,6 @@ public class GradeCalculationService : IGradeCalculationService
         _auditLogRepository = auditLogRepository;
         _currentUserService = currentUserService;
         _mapper = mapper;
-        _selfEvaluationService = selfEvaluationService;
     }
 
     public async Task<EvaluationResultDto> ProcessEvaluationAsync(int hodEvaluationId)
@@ -74,10 +71,6 @@ public class GradeCalculationService : IGradeCalculationService
             throw new ConflictException("This HOD evaluation has already been processed.");
         }
 
-        var (callerId, callerRole) = RequireUserIdAndRole();
-        var results = await _selfEvaluationService.GetByAssignmentAsync(callerId, callerRole, hodEvaluation.SelfEvaluationId);
-
-
         var competencyScores = await _competencyEvaluationRepository.GetByHodEvaluationAsync(hodEvaluationId);
         if (competencyScores.Count < RequiredCompetencyCount)
         {
@@ -86,8 +79,11 @@ public class GradeCalculationService : IGradeCalculationService
                 $"Currently {competencyScores.Count} of {RequiredCompetencyCount} are scored.");
         }
 
-        var employeeId = hodEvaluation.SelfEvaluation.EmployeeId;
-        var periodId = results.PeriodId;
+        // Employee and period must come from the KPI assignment that owns this exact
+        // self/HOD evaluation. Do not look them up using unrelated numeric IDs.
+        var assignment = hodEvaluation.SelfEvaluation.Assignment;
+        var employeeId = assignment.EmployeeId;
+        var periodId = assignment.PeriodId;
 
         var attendance = await _attendanceSummaryRepository.GetByEmployeeAndPeriodAsync(employeeId, periodId)
             ?? throw new ValidationAppException("An attendance summary must be recorded for this employee/period before processing.");
@@ -167,11 +163,5 @@ public class GradeCalculationService : IGradeCalculationService
             RecordId = recordId,
             CreatedDate = DateTime.UtcNow
         });
-    }
-    private (int UserId, string RoleName) RequireUserIdAndRole()
-    {
-        var userId = _currentUserService.UserId ?? throw new UnauthorizedAppException();
-        var roleName = _currentUserService.RoleName ?? throw new UnauthorizedAppException();
-        return (userId, roleName);
     }
 }

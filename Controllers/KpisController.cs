@@ -40,6 +40,23 @@ public class KpisController : BaseApiController
             ApiResponse<KpiAssignmentDto>.SuccessResponse(result, "KPI assignment created as Draft."));
     }
 
+    /// <summary>Creates the same Draft KPI assignment for multiple permitted direct reports.</summary>
+    [HttpPost("bulk")]
+    [Authorize(Roles = $"{RoleNames.CEO},{RoleNames.Manager},{RoleNames.HOD},{RoleNames.Supervisor}")]
+    public async Task<IActionResult> BulkCreate([FromBody] BulkCreateKpiAssignmentDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ApiResponse<object>.FailResponse("Invalid request payload."));
+        }
+
+        var callerId = RequireUserId();
+        var result = await _kpiAssignmentService.BulkCreateAsync(callerId, request);
+        return Ok(ApiResponse<List<KpiAssignmentDto>>.SuccessResponse(
+            result,
+            $"{result.Count} KPI assignments created as Draft."));
+    }
+
     /// <summary>Replaces the line items of a Draft KPI assignment (creator only).</summary>
     [HttpPut("{assignmentId:int}")]
     [Authorize(Roles = $"{RoleNames.CEO},{RoleNames.Manager},{RoleNames.HOD},{RoleNames.Supervisor}")]
