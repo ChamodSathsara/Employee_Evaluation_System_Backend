@@ -43,6 +43,25 @@ public class CompetencyEvaluationsController : BaseApiController
         return Ok(ApiResponse<CompetencyEvaluationDto>.SuccessResponse(result, "Competency score saved."));
     }
 
+    /// <summary>Creates a custom competency and adds its 1-5 score to the HOD's own Draft evaluation.</summary>
+    [HttpPost("custom")]
+    [Authorize(Roles = RoleNames.HOD)]
+    public async Task<IActionResult> CreateAndSubmit(
+        [FromQuery] int hodEvaluationId,
+        [FromBody] CreateCompetencyWithScoreDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ApiResponse<object>.FailResponse("Invalid request payload."));
+        }
+
+        var hodId = RequireUserId();
+        var result = await _competencyEvaluationService.CreateAndSubmitAsync(hodId, hodEvaluationId, request);
+        return Ok(ApiResponse<CompetencyEvaluationDto>.SuccessResponse(
+            result,
+            "Competency created and score saved."));
+    }
+
     /// <summary>Updates an existing competency score by id.</summary>
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateCompetencyEvaluationDto request)

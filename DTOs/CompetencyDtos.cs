@@ -49,6 +49,22 @@ public class SubmitCompetencyEvaluationDto
     public string? Remarks { get; set; }
 }
 
+/// <summary>Creates a custom competency and immediately scores it on one HOD evaluation.</summary>
+public class CreateCompetencyWithScoreDto
+{
+    [Required, MaxLength(100)]
+    public string Name { get; set; } = string.Empty;
+
+    [MaxLength(500)]
+    public string? Description { get; set; }
+
+    [Required, Range(1, 5)]
+    public int Score { get; set; }
+
+    [MaxLength(500)]
+    public string? Remarks { get; set; }
+}
+
 public class UpdateCompetencyEvaluationDto
 {
     [Required, Range(1, 5)]

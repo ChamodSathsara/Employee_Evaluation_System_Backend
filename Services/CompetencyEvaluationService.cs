@@ -88,6 +88,45 @@ public class CompetencyEvaluationService : ICompetencyEvaluationService
         return _mapper.Map<CompetencyEvaluationDto>(created!);
     }
 
+    public async Task<CompetencyEvaluationDto> CreateAndSubmitAsync(
+        int hodId,
+        int hodEvaluationId,
+        CreateCompetencyWithScoreDto request)
+    {
+        await ValidateHodOwnsEvaluationAsync(hodId, hodEvaluationId);
+
+        var name = request.Name.Trim();
+        if (await _competencyRepository.ExistsByNameAsync(name))
+        {
+            throw new ConflictException(
+                $"A competency named '{name}' already exists. Submit its existing competencyId instead.");
+        }
+
+        var competency = new Competency
+        {
+            Name = name,
+            Description = request.Description?.Trim()
+        };
+
+        var scoreEntry = new CompetencyEvaluation
+        {
+            HODEvaluationId = hodEvaluationId,
+            Competency = competency,
+            Score = request.Score,
+            Remarks = request.Remarks?.Trim()
+        };
+
+        await _competencyRepository.AddAsync(competency);
+        await _competencyEvaluationRepository.AddAsync(scoreEntry);
+        await LogAuditAsync(hodId, "Create", "Competencies", competency.CompetencyId);
+        await LogAuditAsync(hodId, "Create", "CompetencyEvaluations", scoreEntry.CompetencyEvaluationId);
+        await _competencyEvaluationRepository.SaveChangesAsync();
+
+        var created = await _competencyEvaluationRepository
+            .GetByHodEvaluationAndCompetencyAsync(hodEvaluationId, competency.CompetencyId);
+        return _mapper.Map<CompetencyEvaluationDto>(created!);
+    }
+
     public async Task<CompetencyEvaluationDto> UpdateAsync(int hodId, int competencyEvaluationId, UpdateCompetencyEvaluationDto request)
     {
         var scoreEntry = await _competencyEvaluationRepository.GetByIdAsync(competencyEvaluationId)
