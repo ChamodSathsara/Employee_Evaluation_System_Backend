@@ -24,4 +24,7 @@ public interface IKPIAssignmentRepository : IGenericRepository<KPIAssignment>
     Task<bool> ExistsForUserAsync(int userId);
 
     Task<bool> HasEvaluationsAsync(int assignmentId);
+
+    /// <summary>Stages the KPI assignment and its complete evaluation graph for deletion.</summary>
+    Task DeleteWithRelatedDataAsync(KPIAssignment assignment);
 }

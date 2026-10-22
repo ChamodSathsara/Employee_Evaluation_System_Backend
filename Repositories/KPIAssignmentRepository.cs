@@ -135,4 +135,104 @@ public class KPIAssignmentRepository : GenericRepository<KPIAssignment>, IKPIAss
     {
         return await Context.EmployeeEvaluations.AnyAsync(e => e.AssignmentId == assignmentId);
     }
+
+    public async Task DeleteWithRelatedDataAsync(KPIAssignment assignment)
+    {
+        var assignmentId = assignment.AssignmentId;
+
+        var kpiDetailIds = await Context.KpiAssignmentDetails
+            .Where(d => d.AssignmentId == assignmentId)
+            .Select(d => d.DetailId)
+            .ToListAsync();
+
+        var selfEvaluationIds = await Context.EmployeeEvaluations
+            .Where(e => e.AssignmentId == assignmentId)
+            .Select(e => e.SelfEvaluationId)
+            .ToListAsync();
+
+        var supervisorEvaluationIds = await Context.SupervisorEvaluations
+            .Where(e => selfEvaluationIds.Contains(e.SelfEvaluationId))
+            .Select(e => e.SupervisorEvaluationId)
+            .ToListAsync();
+
+        var hodEvaluationIds = await Context.HodEvaluations
+            .Where(e => selfEvaluationIds.Contains(e.SelfEvaluationId))
+            .Select(e => e.HODEvaluationId)
+            .ToListAsync();
+
+        var resultIds = await Context.EvaluationResults
+            .Where(r => hodEvaluationIds.Contains(r.HODEvaluationId))
+            .Select(r => r.ResultId)
+            .ToListAsync();
+
+        var achievementIds = await Context.EmployeeAchievements
+            .Where(a => hodEvaluationIds.Contains(a.HODEvaluationId))
+            .Select(a => a.AchievementId)
+            .ToListAsync();
+
+        // Attachments use a polymorphic table/id reference instead of a foreign key.
+        // Remove matching rows explicitly so they do not become orphaned.
+        var attachments = await Context.Attachments
+            .Where(a =>
+                (a.RelatedTable == "KPIAssignments" && a.RelatedId == assignmentId) ||
+                (a.RelatedTable == "KPIAssignmentDetails" && kpiDetailIds.Contains(a.RelatedId)) ||
+                (a.RelatedTable == "EmployeeEvaluations" && selfEvaluationIds.Contains(a.RelatedId)) ||
+                (a.RelatedTable == "SupervisorEvaluations" && supervisorEvaluationIds.Contains(a.RelatedId)) ||
+                (a.RelatedTable == "HODEvaluations" && hodEvaluationIds.Contains(a.RelatedId)) ||
+                (a.RelatedTable == "EmployeeAchievements" && achievementIds.Contains(a.RelatedId)) ||
+                (a.RelatedTable == "EvaluationResults" && resultIds.Contains(a.RelatedId)))
+            .ToListAsync();
+
+        var recommendations = await Context.Recommendations
+            .Where(r => resultIds.Contains(r.ResultId))
+            .ToListAsync();
+        var managerReviews = await Context.ManagerReviews
+            .Where(r => resultIds.Contains(r.ResultId))
+            .ToListAsync();
+        var results = await Context.EvaluationResults
+            .Where(r => resultIds.Contains(r.ResultId))
+            .ToListAsync();
+        var competencyEvaluations = await Context.CompetencyEvaluations
+            .Where(e => hodEvaluationIds.Contains(e.HODEvaluationId))
+            .ToListAsync();
+        var achievements = await Context.EmployeeAchievements
+            .Where(a => achievementIds.Contains(a.AchievementId))
+            .ToListAsync();
+        var hodDetails = await Context.HodEvaluationDetails
+            .Where(d => hodEvaluationIds.Contains(d.HODEvaluationId))
+            .ToListAsync();
+        var supervisorDetails = await Context.SupervisorEvaluationDetails
+            .Where(d => supervisorEvaluationIds.Contains(d.SupervisorEvaluationId))
+            .ToListAsync();
+        var employeeDetails = await Context.EmployeeEvaluationDetails
+            .Where(d => selfEvaluationIds.Contains(d.SelfEvaluationId))
+            .ToListAsync();
+        var hodEvaluations = await Context.HodEvaluations
+            .Where(e => hodEvaluationIds.Contains(e.HODEvaluationId))
+            .ToListAsync();
+        var supervisorEvaluations = await Context.SupervisorEvaluations
+            .Where(e => supervisorEvaluationIds.Contains(e.SupervisorEvaluationId))
+            .ToListAsync();
+        var employeeEvaluations = await Context.EmployeeEvaluations
+            .Where(e => selfEvaluationIds.Contains(e.SelfEvaluationId))
+            .ToListAsync();
+        var kpiDetails = await Context.KpiAssignmentDetails
+            .Where(d => kpiDetailIds.Contains(d.DetailId))
+            .ToListAsync();
+
+        Context.Attachments.RemoveRange(attachments);
+        Context.Recommendations.RemoveRange(recommendations);
+        Context.ManagerReviews.RemoveRange(managerReviews);
+        Context.EvaluationResults.RemoveRange(results);
+        Context.CompetencyEvaluations.RemoveRange(competencyEvaluations);
+        Context.EmployeeAchievements.RemoveRange(achievements);
+        Context.HodEvaluationDetails.RemoveRange(hodDetails);
+        Context.SupervisorEvaluationDetails.RemoveRange(supervisorDetails);
+        Context.EmployeeEvaluationDetails.RemoveRange(employeeDetails);
+        Context.HodEvaluations.RemoveRange(hodEvaluations);
+        Context.SupervisorEvaluations.RemoveRange(supervisorEvaluations);
+        Context.EmployeeEvaluations.RemoveRange(employeeEvaluations);
+        Context.KpiAssignmentDetails.RemoveRange(kpiDetails);
+        Context.KpiAssignments.Remove(assignment);
+    }
 }

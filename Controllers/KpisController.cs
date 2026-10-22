@@ -55,7 +55,7 @@ public class KpisController : BaseApiController
         return Ok(ApiResponse<KpiAssignmentDto>.SuccessResponse(result, "KPI assignment updated."));
     }
 
-    /// <summary>Deletes a Draft or Published KPI assignment (creator only, with no evaluation activity).</summary>
+    /// <summary>Deletes a Draft or Published KPI assignment and its related evaluation data (creator only).</summary>
     [HttpDelete("{assignmentId:int}")]
     [Authorize(Roles = $"{RoleNames.CEO},{RoleNames.Manager},{RoleNames.HOD},{RoleNames.Supervisor}")]
     public async Task<IActionResult> Delete(int assignmentId)

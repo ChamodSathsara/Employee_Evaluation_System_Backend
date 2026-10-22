@@ -120,12 +120,7 @@ public class KpiAssignmentService : IKpiAssignmentService
 
         EnsureCreatorAndDeletableStatus(assignment, callerId);
 
-        if (await _kpiAssignmentRepository.HasEvaluationsAsync(assignmentId))
-        {
-            throw new ConflictException("This KPI assignment already has evaluation activity and cannot be deleted.");
-        }
-
-        await _kpiAssignmentRepository.DeleteAsync(assignment);
+        await _kpiAssignmentRepository.DeleteWithRelatedDataAsync(assignment);
         await LogAuditAsync(callerId, "Delete", "KPIAssignments", assignmentId);
         await _kpiAssignmentRepository.SaveChangesAsync();
     }
