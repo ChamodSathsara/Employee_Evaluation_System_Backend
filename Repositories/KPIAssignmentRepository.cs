@@ -14,7 +14,9 @@ public class KPIAssignmentRepository : GenericRepository<KPIAssignment>, IKPIAss
     {
         return await Context.KpiAssignments
             .Include(a => a.Employee).ThenInclude(e => e.Role)
-            .Include(a => a.CreatedByUser)
+            .Include(a => a.CreatedByUser).ThenInclude(u => u.Role)
+            .Include(a => a.CreatedByUser).ThenInclude(u => u.Designation)
+            .Include(a => a.CreatedByUser).ThenInclude(u => u.Department)
             .Include(a => a.Period)
             .Include(a => a.Details)
             .FirstOrDefaultAsync(a => a.AssignmentId == assignmentId);

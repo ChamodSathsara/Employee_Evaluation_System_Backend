@@ -231,7 +231,13 @@ public class KpiAssignmentService : IKpiAssignmentService
         await _emailService.SendKpiPublishedAsync(
             assignment.Employee.Email,
             $"{assignment.Employee.FirstName} {assignment.Employee.LastName}".Trim(),
-            assignment.Period.Name);
+            assignment.Period.Name,
+            $"{assignment.CreatedByUser.FirstName} {assignment.CreatedByUser.LastName}".Trim(),
+            assignment.CreatedByUser.Designation is null
+                ? assignment.CreatedByUser.Role.RoleName
+                : $"{assignment.CreatedByUser.Designation.DesignationName} ({assignment.CreatedByUser.Role.RoleName})",
+            assignment.CreatedByUser.Department?.DepartmentName ?? "Not specified",
+            assignment.Details.Count);
 
         return _mapper.Map<KpiAssignmentDto>(assignment);
     }

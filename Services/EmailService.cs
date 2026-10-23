@@ -18,6 +18,10 @@ public class EmailService : IEmailService
         string recipientEmail,
         string recipientName,
         string periodName,
+        string assignedByName,
+        string designation,
+        string department,
+        int kpiCount,
         CancellationToken cancellationToken = default)
     {
         var host = _configuration["Email:SmtpHost"];
@@ -37,13 +41,43 @@ public class EmailService : IEmailService
         var port = _configuration.GetValue("Email:SmtpPort", 587);
         var enableSsl = _configuration.GetValue("Email:EnableSsl", true);
         var fromName = _configuration["Email:FromName"] ?? "Employee Evaluation System";
+        var evaluationUrl = _configuration["Email:KpiEvaluationUrl"] ?? "http://localhost:3000/my-kpis";
+
+        var safeRecipientName = WebUtility.HtmlEncode(recipientName);
+        var safePeriodName = WebUtility.HtmlEncode(periodName);
+        var safeAssignedByName = WebUtility.HtmlEncode(assignedByName);
+        var safeDesignation = WebUtility.HtmlEncode(designation);
+        var safeDepartment = WebUtility.HtmlEncode(department);
+        var safeEvaluationUrl = WebUtility.HtmlEncode(evaluationUrl);
 
         using var message = new MailMessage
         {
             From = new MailAddress(fromEmail, fromName),
             Subject = $"KPIs published for {periodName}",
-            Body = $"Hello {recipientName},\n\nYour KPI assignment for '{periodName}' has been published. You can now sign in to the Employee Evaluation System and review your KPIs.\n\nRegards,\n{fromName}",
-            IsBodyHtml = false
+            Body = $"""
+                <p>Dear {safeRecipientName},</p>
+
+                <p>Kindly log in to the Employee Evaluation System and complete your
+                <strong>self-evaluation</strong> for each assigned KPI.</p>
+
+                <p><strong>KPI Assignment Details:</strong></p>
+                <ul>
+                    <li><strong>Evaluation Period:</strong> {safePeriodName}</li>
+                    <li><strong>Assigned By:</strong> {safeAssignedByName}</li>
+                    <li><strong>Designation:</strong> {safeDesignation}</li>
+                    <li><strong>Department:</strong> {safeDepartment}</li>
+                    <li><strong>Total Assigned KPIs:</strong> {kpiCount}</li>
+                </ul>
+
+                <p><strong>KPI Evaluation Link:</strong>
+                <a href="{safeEvaluationUrl}">{safeEvaluationUrl}</a></p>
+
+                <p>Please ensure that your self-evaluation is completed within the given timeline.</p>
+
+                <p>Thankyou,<br>
+                GD Department.</p>
+                """,
+            IsBodyHtml = true
         };
         message.To.Add(new MailAddress(recipientEmail, recipientName));
 
