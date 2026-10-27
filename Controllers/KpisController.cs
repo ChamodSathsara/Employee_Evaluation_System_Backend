@@ -10,7 +10,8 @@ namespace EmployeeEvaluationSystem.Controllers;
 /// KPI Assignment endpoints. Creation is restricted to CEO, Manager, HOD, and Supervisor,
 /// each of whom may only assign KPIs to their own direct reports (see IKpiAssignmentService
 /// for the exact role/hierarchy matrix). Admin and Employee never create KPI assignments.
-/// </summary>
+/// </summary>/
+
 [Route("api/kpis")]
 [Authorize]
 public class KpisController : BaseApiController
