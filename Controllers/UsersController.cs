@@ -18,7 +18,7 @@ public class UsersController : BaseApiController
         _userService = userService;
     }
 
-    /// <summary>Lists users with optional keyword/role/department/status filters and paging.</summary>
+    /// <summary>Lists users with optional keyword/role/company/department/status filters and paging.</summary>
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] UserSearchDto search)
     {
@@ -48,7 +48,7 @@ public class UsersController : BaseApiController
             ApiResponse<UserDto>.SuccessResponse(result, "User created successfully."));
     }
 
-    /// <summary>Updates an existing user's profile, role, department, designation, and ReportsTo.</summary>
+    /// <summary>Updates an existing user's profile, role, company, department, designation, and ReportsTo.</summary>
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateUserDto request)
     {

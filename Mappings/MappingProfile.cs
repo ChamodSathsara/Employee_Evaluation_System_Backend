@@ -63,6 +63,8 @@ public class MappingProfile : Profile
         CreateMap<CreateDesignationDto, Designation>().ForMember(dest => dest.DesignationId, opt => opt.Ignore());
         CreateMap<UpdateDesignationDto, Designation>().ForMember(dest => dest.DesignationId, opt => opt.Ignore());
 
+        CreateMap<Company, CompanyDto>().ForMember(dest => dest.UserCount, opt => opt.Ignore());
+
         CreateMap<EvaluationPeriod, EvaluationPeriodDto>();
         CreateMap<CreateEvaluationPeriodDto, EvaluationPeriod>()
             .ForMember(dest => dest.PeriodId, opt => opt.Ignore())

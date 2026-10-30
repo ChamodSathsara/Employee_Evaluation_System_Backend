@@ -44,7 +44,8 @@ public class CreateUserDto
     [Required]
     public int RoleId { get; set; }
 
-    public int? CompanyId { get; set; }
+    [Required]
+    public int CompanyId { get; set; }
 
     public int? DepartmentId { get; set; }
 
@@ -68,7 +69,8 @@ public class UpdateUserDto
     [Required]
     public int RoleId { get; set; }
 
-    public int? CompanyId { get; set; }
+    [Required]
+    public int CompanyId { get; set; }
 
     public int? DepartmentId { get; set; }
 
