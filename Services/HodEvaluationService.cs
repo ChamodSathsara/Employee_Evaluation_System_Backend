@@ -179,12 +179,12 @@ public class HodEvaluationService : IHodEvaluationService
     {
         var employee = selfEvaluation.Employee;
 
-        if (employee.ReportsTo == hodId)
+        if (employee.ReportedHodId == hodId)
         {
             return;
         }
 
-        if (employee.Manager?.ReportsTo == hodId)
+        if (employee.ReportedSupervisor?.ReportedHodId == hodId)
         {
             var supervisorSubmitted = selfEvaluation.SupervisorEvaluations.Any(s => s.Status == "Submitted");
             if (!supervisorSubmitted)

@@ -152,7 +152,7 @@ public class SelfEvaluationService : ISelfEvaluationService
         await _employeeEvaluationRepository.UpdateAsync(evaluation);
 
         var employee = await _userRepository.GetByIdWithDetailsAsync(employeeId);
-        var nextReviewerId = employee?.ReportsTo;
+        var nextReviewerId = employee?.ReportedSupervisorId ?? employee?.ReportedHodId;
 
         if (nextReviewerId.HasValue)
         {

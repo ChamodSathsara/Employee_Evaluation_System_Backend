@@ -23,7 +23,8 @@ public class UserRepository : GenericRepository<User>, IUserRepository
                 .Include(u => u.Company)
                 .Include(u => u.Department)
                 .Include(u => u.Designation)
-                .Include(u => u.Manager)
+                .Include(u => u.ReportedSupervisor)
+                .Include(u => u.ReportedHod)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.UserId == userId);
         }
@@ -99,7 +100,8 @@ public class UserRepository : GenericRepository<User>, IUserRepository
                 .Include(u => u.Company)
                 .Include(u => u.Department)
                 .Include(u => u.Designation)
-                .Include(u => u.Manager)
+                .Include(u => u.ReportedSupervisor)
+                .Include(u => u.ReportedHod)
                 .AsNoTracking();
 
             
@@ -121,7 +123,7 @@ public class UserRepository : GenericRepository<User>, IUserRepository
                 .Include(u => u.Role)
                 .Include(u => u.Company)
                 .Include(u => u.Department)
-                .Where(u => u.ReportsTo == managerUserId)
+                .Where(u => u.ReportedSupervisorId == managerUserId || u.ReportedHodId == managerUserId)
                 .AsNoTracking()
                 .ToListAsync();
         }

@@ -40,10 +40,14 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasForeignKey(u => u.DesignationId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Self-referencing "reports to" relationship
-        builder.HasOne(u => u.Manager)
-            .WithMany(u => u.DirectReports)
-            .HasForeignKey(u => u.ReportsTo)
+        builder.HasOne(u => u.ReportedSupervisor)
+            .WithMany(u => u.SupervisorReports)
+            .HasForeignKey(u => u.ReportedSupervisorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(u => u.ReportedHod)
+            .WithMany(u => u.HodReports)
+            .HasForeignKey(u => u.ReportedHodId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

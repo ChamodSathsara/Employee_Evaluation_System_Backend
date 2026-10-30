@@ -42,7 +42,8 @@ public class BulkImportService : IBulkImportService
             "DesignationName");
         var userRows = ReadRows(userSheet,
             "EmployeeNo", "FirstName", "LastName", "Email", "Password", "RoleName",
-            "DepartmentName", "DesignationName", "ReportsToEmployeeNo", "IsActive");
+            "DepartmentName", "DesignationName", "ReportedSupervisorEmployeeNo",
+            "ReportedHodEmployeeNo", "IsActive");
 
         var errors = new List<string>();
         var existingDepartments = await _context.Departments.ToListAsync();
@@ -103,7 +104,8 @@ public class BulkImportService : IBulkImportService
             newDesignations.Add(designation);
         }
 
-        var importedUserRows = new List<(ExcelRow Row, User User, string RoleName, string? ReportsToEmployeeNo)>();
+        var importedUserRows = new List<(ExcelRow Row, User User, string RoleName,
+            string? SupervisorEmployeeNo, string? HodEmployeeNo)>();
         var importedEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var row in userRows)
@@ -116,7 +118,8 @@ public class BulkImportService : IBulkImportService
             var roleName = row.Value("RoleName").Trim();
             var departmentName = NullIfWhiteSpace(row.Value("DepartmentName"));
             var designationName = NullIfWhiteSpace(row.Value("DesignationName"));
-            var reportsToEmployeeNo = NullIfWhiteSpace(row.Value("ReportsToEmployeeNo"));
+            var supervisorEmployeeNo = NullIfWhiteSpace(row.Value("ReportedSupervisorEmployeeNo"));
+            var hodEmployeeNo = NullIfWhiteSpace(row.Value("ReportedHodEmployeeNo"));
             var isActiveText = NullIfWhiteSpace(row.Value("IsActive"));
 
             if (string.IsNullOrWhiteSpace(employeeNo) || string.IsNullOrWhiteSpace(firstName) ||
@@ -193,27 +196,46 @@ public class BulkImportService : IBulkImportService
             };
 
             usersByEmployeeNo[employeeNo] = user;
-            importedUserRows.Add((row, user, role.RoleName, reportsToEmployeeNo));
+            importedUserRows.Add((row, user, role.RoleName, supervisorEmployeeNo, hodEmployeeNo));
         }
 
         foreach (var item in importedUserRows)
         {
-            User? manager = null;
-            if (item.ReportsToEmployeeNo is not null &&
-                !usersByEmployeeNo.TryGetValue(item.ReportsToEmployeeNo, out manager))
+            User? supervisor = null;
+            User? hod = null;
+
+            if (item.SupervisorEmployeeNo is not null &&
+                !usersByEmployeeNo.TryGetValue(item.SupervisorEmployeeNo, out supervisor))
             {
-                errors.Add($"Users row {item.Row.RowNumber}: ReportsTo employee '{item.ReportsToEmployeeNo}' was not found.");
+                errors.Add($"Users row {item.Row.RowNumber}: reported supervisor '{item.SupervisorEmployeeNo}' was not found.");
                 continue;
             }
 
-            var managerRole = manager?.Role.RoleName;
-            if (!IsValidHierarchy(item.RoleName, managerRole))
+            if (item.HodEmployeeNo is not null &&
+                !usersByEmployeeNo.TryGetValue(item.HodEmployeeNo, out hod))
             {
-                errors.Add($"Users row {item.Row.RowNumber}: role '{item.RoleName}' cannot report to role '{managerRole ?? "none"}'.");
+                errors.Add($"Users row {item.Row.RowNumber}: reported HOD '{item.HodEmployeeNo}' was not found.");
                 continue;
             }
 
-            item.User.Manager = manager;
+            if (item.RoleName == RoleNames.Employee && supervisor is null && hod is null)
+            {
+                errors.Add($"Users row {item.Row.RowNumber}: an Employee must have at least one reported Supervisor or HOD.");
+                continue;
+            }
+            if (supervisor is not null && supervisor.Role.RoleName != RoleNames.Supervisor)
+            {
+                errors.Add($"Users row {item.Row.RowNumber}: ReportedSupervisorEmployeeNo must reference a Supervisor.");
+                continue;
+            }
+            if (hod is not null && hod.Role.RoleName != RoleNames.HOD)
+            {
+                errors.Add($"Users row {item.Row.RowNumber}: ReportedHodEmployeeNo must reference an HOD.");
+                continue;
+            }
+
+            item.User.ReportedSupervisor = supervisor;
+            item.User.ReportedHod = hod;
         }
 
         if (errors.Count > 0)

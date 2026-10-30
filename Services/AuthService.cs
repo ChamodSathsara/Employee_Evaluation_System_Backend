@@ -82,8 +82,35 @@ public class AuthService : IAuthService
             throw new ConflictException($"A user with employee number '{request.EmployeeNo}' already exists.");
         }
 
-        _ = await _roleRepository.GetByIdAsync(request.RoleId)
+        var role = await _roleRepository.GetByIdAsync(request.RoleId)
             ?? throw new NotFoundException("Role", request.RoleId);
+
+        if (role.RoleName == RoleNames.Employee &&
+            !request.ReportedSupervisorId.HasValue && !request.ReportedHodId.HasValue)
+        {
+            throw new ValidationAppException(
+                "An Employee must have at least one of ReportedSupervisorId or ReportedHodId.");
+        }
+
+        if (request.ReportedSupervisorId.HasValue)
+        {
+            var supervisor = await _userRepository.GetByIdWithDetailsAsync(request.ReportedSupervisorId.Value)
+                ?? throw new NotFoundException("Reported Supervisor", request.ReportedSupervisorId.Value);
+            if (supervisor.Role.RoleName != RoleNames.Supervisor)
+            {
+                throw new ValidationAppException("ReportedSupervisorId must reference a user with the Supervisor role.");
+            }
+        }
+
+        if (request.ReportedHodId.HasValue)
+        {
+            var hod = await _userRepository.GetByIdWithDetailsAsync(request.ReportedHodId.Value)
+                ?? throw new NotFoundException("Reported HOD", request.ReportedHodId.Value);
+            if (role.RoleName == RoleNames.Employee && hod.Role.RoleName != RoleNames.HOD)
+            {
+                throw new ValidationAppException("ReportedHodId must reference a user with the HOD role.");
+            }
+        }
 
         if (request.DepartmentId.HasValue && !await _departmentRepository.ExistsAsync(request.DepartmentId.Value))
         {
@@ -105,7 +132,8 @@ public class AuthService : IAuthService
             RoleId = request.RoleId,
             DepartmentId = request.DepartmentId,
             DesignationId = request.DesignationId,
-            ReportsTo = request.ReportsTo,
+            ReportedSupervisorId = request.ReportedSupervisorId,
+            ReportedHodId = request.ReportedHodId,
             IsActive = true,
             CreatedDate = DateTime.UtcNow
         };
@@ -199,7 +227,8 @@ public class AuthService : IAuthService
     private async Task<LoginResponseDto> IssueTokensAsync(User user)
     {
         var accessToken = _jwtTokenHelper.GenerateAccessToken(
-            user.UserId, user.Email, user.Role.RoleName, user.ReportsTo, user.DepartmentId);
+            user.UserId, user.Email, user.Role.RoleName,
+            user.ReportedSupervisorId ?? user.ReportedHodId, user.DepartmentId);
 
         var refreshToken = _jwtTokenHelper.GenerateRefreshToken();
         var refreshTokenDays = int.Parse(_configuration["Jwt:RefreshTokenExpiryDays"] ?? "7");

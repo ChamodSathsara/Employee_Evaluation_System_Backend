@@ -96,17 +96,13 @@ public class UserService : IUserService
         var totalCount = await query.CountAsync();
 
         var users = await query
-            .Include(u => u.Manager) // Include manager
+            .Include(u => u.ReportedSupervisor)
+            .Include(u => u.ReportedHod)
             .OrderBy(u => u.FirstName).ThenBy(u => u.LastName)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
         var userDtos = _mapper.Map<List<UserDto>>(users);
-
-        for (int i = 0; i < users.Count; i++)
-        {
-            userDtos[i].ManagerName = users[i].Manager?.FirstName;
-        }
 
         return new PagedResultDto<UserDto>
         {
@@ -157,7 +153,7 @@ public class UserService : IUserService
             throw new NotFoundException("Designation", request.DesignationId.Value);
         }
 
-        await ValidateReportsToHierarchyAsync(role.RoleName, request.ReportsTo);
+        await ValidateReportingAssignmentsAsync(role.RoleName, request.ReportedSupervisorId, request.ReportedHodId);
 
         var user = _mapper.Map<User>(request);
         user.PasswordHash = _passwordHasher.Hash(request.Password);
@@ -202,12 +198,12 @@ public class UserService : IUserService
             throw new NotFoundException("Designation", request.DesignationId.Value);
         }
 
-        if (request.ReportsTo == userId)
+        if (request.ReportedSupervisorId == userId || request.ReportedHodId == userId)
         {
             throw new ValidationAppException("A user cannot report to themselves.");
         }
 
-        await ValidateReportsToHierarchyAsync(role.RoleName, request.ReportsTo);
+        await ValidateReportingAssignmentsAsync(role.RoleName, request.ReportedSupervisorId, request.ReportedHodId);
 
         _mapper.Map(request, user);
 
@@ -326,73 +322,49 @@ public class UserService : IUserService
     /// Admin/CEO -> no manager. Manager -> reports to a CEO. HOD -> reports to a Manager.
     /// Supervisor -> reports to an HOD. Employee -> reports to a Supervisor or an HOD.
     /// </summary>
-    private async Task ValidateReportsToHierarchyAsync(string roleName, int? reportsTo)
+    private async Task ValidateReportingAssignmentsAsync(
+        string roleName,
+        int? reportedSupervisorId,
+        int? reportedHodId)
     {
-        switch (roleName)
+        if (roleName is RoleNames.Admin or RoleNames.CEO)
         {
-            case RoleNames.Admin:
-            case RoleNames.CEO:
-                if (reportsTo.HasValue)
-                {
-                    throw new ValidationAppException($"A user with role '{roleName}' must not have a ReportsTo manager.");
-                }
-                break;
-
-            case RoleNames.Manager:
-                await RequireManagerWithRoleAsync(reportsTo, roleName, RoleNames.CEO);
-                break;
-
-            case RoleNames.HOD:
-                await RequireManagerWithRoleAsync(reportsTo, roleName, RoleNames.CEO);
-                break;
-
-            case RoleNames.Supervisor:
-                await RequireManagerWithRoleAsync(reportsTo, roleName, RoleNames.HOD);
-                break;
-
-            case RoleNames.Employee:
-                await RequireManagerWithAnyRoleAsync(reportsTo, roleName, RoleNames.Supervisor, RoleNames.HOD);
-                break;
-
-            default:
-                throw new ValidationAppException($"Unrecognized role '{roleName}'.");
-        }
-    }
-
-    private async Task RequireManagerWithRoleAsync(int? reportsTo, string roleName, string requiredManagerRole)
-    {
-        if (!reportsTo.HasValue)
-        {
-            throw new ValidationAppException($"A user with role '{roleName}' must have a ReportsTo manager with role '{requiredManagerRole}'.");
+            if (reportedSupervisorId.HasValue || reportedHodId.HasValue)
+            {
+                throw new ValidationAppException($"A user with role '{roleName}' must not have a reported supervisor or HOD.");
+            }
+            return;
         }
 
-        var manager = await _userRepository.GetByIdWithDetailsAsync(reportsTo.Value)
-            ?? throw new NotFoundException("Manager (ReportsTo user)", reportsTo.Value);
-
-        if (manager.Role.RoleName != requiredManagerRole)
+        if (roleName == RoleNames.Employee && !reportedSupervisorId.HasValue && !reportedHodId.HasValue)
         {
             throw new ValidationAppException(
-                $"A user with role '{roleName}' must report to a user with role '{requiredManagerRole}', " +
-                $"but user {reportsTo.Value} has role '{manager.Role.RoleName}'.");
-        }
-    }
-
-    private async Task RequireManagerWithAnyRoleAsync(int? reportsTo, string roleName, params string[] allowedManagerRoles)
-    {
-        if (!reportsTo.HasValue)
-        {
-            throw new ValidationAppException(
-                $"A user with role '{roleName}' must have a ReportsTo manager with role '{string.Join("' or '", allowedManagerRoles)}'.");
+                "An Employee must have at least one of ReportedSupervisorId or ReportedHodId.");
         }
 
-        var manager = await _userRepository.GetByIdWithDetailsAsync(reportsTo.Value)
-            ?? throw new NotFoundException("Manager (ReportsTo user)", reportsTo.Value);
-
-        if (!allowedManagerRoles.Contains(manager.Role.RoleName))
+        if (roleName == RoleNames.Supervisor && !reportedHodId.HasValue)
         {
-            throw new ValidationAppException(
-                $"A user with role '{roleName}' must report to a user with role '{string.Join("' or '", allowedManagerRoles)}', " +
-                $"but user {reportsTo.Value} has role '{manager.Role.RoleName}'.");
+            throw new ValidationAppException("A Supervisor must have a ReportedHodId.");
+        }
+
+        if (reportedSupervisorId.HasValue)
+        {
+            var supervisor = await _userRepository.GetByIdWithDetailsAsync(reportedSupervisorId.Value)
+                ?? throw new NotFoundException("Reported Supervisor", reportedSupervisorId.Value);
+            if (supervisor.Role.RoleName != RoleNames.Supervisor)
+            {
+                throw new ValidationAppException("ReportedSupervisorId must reference a user with the Supervisor role.");
+            }
+        }
+
+        if (reportedHodId.HasValue)
+        {
+            var hod = await _userRepository.GetByIdWithDetailsAsync(reportedHodId.Value)
+                ?? throw new NotFoundException("Reported HOD", reportedHodId.Value);
+            if ((roleName is RoleNames.Employee or RoleNames.Supervisor) && hod.Role.RoleName != RoleNames.HOD)
+            {
+                throw new ValidationAppException("ReportedHodId must reference a user with the HOD role.");
+            }
         }
     }
 

@@ -37,7 +37,7 @@ public class TeamController : BaseApiController
             .Include(u => u.Role)
             .Include(u => u.Department)
             .Include(u => u.Designation)
-            .Where(u => u.ReportsTo == callerId)
+            .Where(u => u.ReportedSupervisorId == callerId || u.ReportedHodId == callerId)
             .OrderBy(u => u.FirstName)
             .Select(u => new TeamMemberDto
             {
@@ -85,7 +85,8 @@ public class TeamController : BaseApiController
         while (queue.Count > 0)
         {
             var currentId = queue.Dequeue();
-            foreach (var report in allUsers.Where(u => u.ReportsTo == currentId))
+            foreach (var report in allUsers.Where(u =>
+                         u.ReportedSupervisorId == currentId || u.ReportedHodId == currentId))
             {
                 if (visited.Add(report.UserId))
                 {

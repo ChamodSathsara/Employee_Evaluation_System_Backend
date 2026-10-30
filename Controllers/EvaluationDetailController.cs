@@ -187,7 +187,7 @@ public class EvaluationDetailController : BaseApiController
         {
             var managerId = await _context.Users
                 .Where(u => u.UserId == currentId.Value)
-                .Select(u => u.ReportsTo)
+                .Select(u => u.ReportedSupervisorId ?? u.ReportedHodId)
                 .FirstOrDefaultAsync();
 
             if (managerId == callerId)

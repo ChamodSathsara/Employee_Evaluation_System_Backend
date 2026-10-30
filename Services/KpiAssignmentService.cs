@@ -293,7 +293,8 @@ public class KpiAssignmentService : IKpiAssignmentService
         var allowed = callerRole == RoleNames.Admin
             || assignment.EmployeeId == callerId
             || assignment.CreatedBy == callerId
-            || assignment.Employee.ReportsTo == callerId;
+            || assignment.Employee.ReportedSupervisorId == callerId
+            || assignment.Employee.ReportedHodId == callerId;
 
         if (!allowed)
         {
@@ -381,7 +382,7 @@ public class KpiAssignmentService : IKpiAssignmentService
     /// <summary>Validates the target employee directly reports to the creator (ReportsTo == creator.UserId).</summary>
     private static void ValidateDirectReport(User creator, User employee)
     {
-        if (employee.ReportsTo != creator.UserId)
+        if (employee.ReportedSupervisorId != creator.UserId && employee.ReportedHodId != creator.UserId)
         {
             throw new ForbiddenException(
                 $"'{employee.FirstName} {employee.LastName}' does not directly report to you. KPIs may only be assigned to your direct reports.");

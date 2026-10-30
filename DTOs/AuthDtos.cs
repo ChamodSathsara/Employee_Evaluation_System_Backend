@@ -25,7 +25,8 @@ public class UserProfileDto
     public string? DepartmentName { get; set; }
     public int? DesignationId { get; set; }
     public string? DesignationName { get; set; }
-    public int? ReportsTo { get; set; }
+    public int? ReportedSupervisorId { get; set; }
+    public int? ReportedHodId { get; set; }
     public bool IsActive { get; set; }
 }
 
@@ -61,7 +62,8 @@ public class RegisterRequestDto
 
     public int? DesignationId { get; set; }
 
-    public int? ReportsTo { get; set; }
+    public int? ReportedSupervisorId { get; set; }
+    public int? ReportedHodId { get; set; }
 }
 
 public class RefreshTokenRequestDto

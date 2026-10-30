@@ -34,7 +34,7 @@ public class UsersController : BaseApiController
         return Ok(ApiResponse<UserDto>.SuccessResponse(result));
     }
 
-    /// <summary>Creates a new user account, validating the ReportsTo hierarchy for the assigned role.</summary>
+    /// <summary>Creates a new user account with a reported Supervisor or HOD assignment.</summary>
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateUserDto request)
     {
@@ -48,7 +48,7 @@ public class UsersController : BaseApiController
             ApiResponse<UserDto>.SuccessResponse(result, "User created successfully."));
     }
 
-    /// <summary>Updates an existing user's profile, role, company, department, designation, and ReportsTo.</summary>
+    /// <summary>Updates an existing user's profile and reporting assignments.</summary>
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateUserDto request)
     {

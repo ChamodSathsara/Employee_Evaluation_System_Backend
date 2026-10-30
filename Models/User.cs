@@ -12,7 +12,8 @@ public class User
     public int? CompanyId { get; set; }
     public int? DepartmentId { get; set; }
     public int? DesignationId { get; set; }
-    public int? ReportsTo { get; set; }
+    public int? ReportedSupervisorId { get; set; }
+    public int? ReportedHodId { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedDate { get; set; }
 
@@ -26,6 +27,8 @@ public class User
     public Company? Company { get; set; }
     public Department? Department { get; set; }
     public Designation? Designation { get; set; }
-    public User? Manager { get; set; }
-    public ICollection<User> DirectReports { get; set; } = new List<User>();
+    public User? ReportedSupervisor { get; set; }
+    public User? ReportedHod { get; set; }
+    public ICollection<User> SupervisorReports { get; set; } = new List<User>();
+    public ICollection<User> HodReports { get; set; } = new List<User>();
 }

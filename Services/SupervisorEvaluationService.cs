@@ -174,7 +174,7 @@ public class SupervisorEvaluationService : ISupervisorEvaluationService
 
     private static void ValidateSupervisorOwnsEmployee(int supervisorId, EmployeeEvaluation selfEvaluation)
     {
-        if (selfEvaluation.Employee.ReportsTo != supervisorId)
+        if (selfEvaluation.Employee.ReportedSupervisorId != supervisorId)
         {
             throw new ForbiddenException("This employee does not directly report to you.");
         }

@@ -23,8 +23,10 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.CompanyName, opt => opt.MapFrom(src => src.Company == null ? null : src.Company.CompanyName))
             .ForMember(dest => dest.DepartmentName, opt => opt.MapFrom(src => src.Department == null ? null : src.Department.DepartmentName))
             .ForMember(dest => dest.DesignationName, opt => opt.MapFrom(src => src.Designation == null ? null : src.Designation.DesignationName))
-            .ForMember(dest => dest.ManagerName, opt => opt.MapFrom(src =>
-                src.Manager == null ? null : src.Manager.FirstName + " " + src.Manager.LastName));
+            .ForMember(dest => dest.ReportedSupervisorName, opt => opt.MapFrom(src =>
+                src.ReportedSupervisor == null ? null : src.ReportedSupervisor.FirstName + " " + src.ReportedSupervisor.LastName))
+            .ForMember(dest => dest.ReportedHodName, opt => opt.MapFrom(src =>
+                src.ReportedHod == null ? null : src.ReportedHod.FirstName + " " + src.ReportedHod.LastName));
 
         CreateMap<CreateUserDto, User>()
             .ForMember(dest => dest.PasswordHash, opt => opt.Ignore())

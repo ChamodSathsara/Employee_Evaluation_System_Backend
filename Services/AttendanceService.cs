@@ -42,7 +42,7 @@ public class AttendanceService : IAttendanceService
             var employee = await _userRepository.GetByIdAsync(employeeId)
                 ?? throw new NotFoundException("Employee", employeeId);
 
-            var isManagerChain = employee.ReportsTo == callerId;
+            var isManagerChain = employee.ReportedSupervisorId == callerId || employee.ReportedHodId == callerId;
             if (!isManagerChain)
             {
                 throw new ForbiddenException("You are not authorized to view this employee's attendance.");

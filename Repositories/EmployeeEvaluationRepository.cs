@@ -44,7 +44,7 @@ public class EmployeeEvaluationRepository : GenericRepository<EmployeeEvaluation
         return await Context.EmployeeEvaluations
             .Include(e => e.Employee)
             .Include(e => e.Assignment).ThenInclude(a => a.Period)
-            .Where(e => e.Status == "Submitted" && e.Employee.ReportsTo == supervisorId)
+            .Where(e => e.Status == "Submitted" && e.Employee.ReportedSupervisorId == supervisorId)
             .Where(e => !e.SupervisorEvaluations.Any(se => se.Status == "Submitted"))
             .AsNoTracking()
             .AsSplitQuery()
@@ -54,12 +54,12 @@ public class EmployeeEvaluationRepository : GenericRepository<EmployeeEvaluation
     public async Task<List<EmployeeEvaluation>> GetPendingForHodAsync(int hodId)
     {
         return await Context.EmployeeEvaluations
-            .Include(e => e.Employee).ThenInclude(emp => emp.Manager)
+            .Include(e => e.Employee).ThenInclude(emp => emp.ReportedSupervisor)
             .Include(e => e.Assignment).ThenInclude(a => a.Period)
             .Where(e => e.Status == "Submitted")
             .Where(e =>
-                e.Employee.ReportsTo == hodId ||
-                (e.Employee.Manager != null && e.Employee.Manager.ReportsTo == hodId &&
+                e.Employee.ReportedHodId == hodId ||
+                (e.Employee.ReportedSupervisor != null && e.Employee.ReportedSupervisor.ReportedHodId == hodId &&
                  e.SupervisorEvaluations.Any(se => se.Status == "Submitted")))
             .Where(e => !e.HodEvaluations.Any(he => he.Status == "Submitted"))
             .AsNoTracking()
