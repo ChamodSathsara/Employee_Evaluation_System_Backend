@@ -14,3 +14,9 @@ public class CreateCompanyDto
     [Required, MaxLength(150)]
     public string CompanyName { get; set; } = string.Empty;
 }
+
+public class UpdateCompanyDto
+{
+    [Required, MaxLength(150)]
+    public string CompanyName { get; set; } = string.Empty;
+}

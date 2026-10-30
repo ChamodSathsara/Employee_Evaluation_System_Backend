@@ -43,4 +43,16 @@ public class CompaniesController : BaseApiController
         return CreatedAtAction(nameof(GetById), new { id = result.CompanyId },
             ApiResponse<CompanyDto>.SuccessResponse(result, "Company created successfully."));
     }
+
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Update(int id, [FromBody] UpdateCompanyDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ApiResponse<object>.FailResponse("Invalid request payload."));
+        }
+
+        var result = await _companyService.UpdateAsync(id, request);
+        return Ok(ApiResponse<CompanyDto>.SuccessResponse(result, "Company updated successfully."));
+    }
 }

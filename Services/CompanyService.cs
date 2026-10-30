@@ -74,4 +74,39 @@ public class CompanyService : ICompanyService
 
         return _mapper.Map<CompanyDto>(company);
     }
+
+    public async Task<CompanyDto> UpdateAsync(int companyId, UpdateCompanyDto request)
+    {
+        if (!_currentUserService.IsInRole(RoleNames.Admin))
+        {
+            throw new ForbiddenException("Only Admin can manage companies.");
+        }
+
+        var company = await _companyRepository.GetByIdAsync(companyId)
+            ?? throw new NotFoundException("Company", companyId);
+        var companyName = request.CompanyName.Trim();
+
+        if (await _companyRepository.ExistsByNameAsync(companyName, excludeCompanyId: companyId))
+        {
+            throw new ConflictException($"A company named '{companyName}' already exists.");
+        }
+
+        company.CompanyName = companyName;
+        await _companyRepository.UpdateAsync(company);
+        await _companyRepository.SaveChangesAsync();
+
+        await _auditLogRepository.AddAsync(new AuditLog
+        {
+            UserId = _currentUserService.UserId ?? 0,
+            Action = "Update",
+            TableName = "Companies",
+            RecordId = company.CompanyId,
+            CreatedDate = DateTime.UtcNow
+        });
+        await _auditLogRepository.SaveChangesAsync();
+
+        var result = _mapper.Map<CompanyDto>(company);
+        result.UserCount = await _companyRepository.CountUsersAsync(companyId);
+        return result;
+    }
 }
