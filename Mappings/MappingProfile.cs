@@ -20,6 +20,7 @@ public class MappingProfile : Profile
 
         CreateMap<User, UserDto>()
             .ForMember(dest => dest.RoleName, opt => opt.MapFrom(src => src.Role.RoleName))
+            .ForMember(dest => dest.CompanyName, opt => opt.MapFrom(src => src.Company == null ? null : src.Company.CompanyName))
             .ForMember(dest => dest.DepartmentName, opt => opt.MapFrom(src => src.Department == null ? null : src.Department.DepartmentName))
             .ForMember(dest => dest.DesignationName, opt => opt.MapFrom(src => src.Designation == null ? null : src.Designation.DesignationName))
             .ForMember(dest => dest.ManagerName, opt => opt.MapFrom(src =>

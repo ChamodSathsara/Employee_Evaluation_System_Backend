@@ -20,6 +20,7 @@ public class UserRepository : GenericRepository<User>, IUserRepository
         {
             return await Context.Users
                 .Include(u => u.Role)
+                .Include(u => u.Company)
                 .Include(u => u.Department)
                 .Include(u => u.Designation)
                 .Include(u => u.Manager)
@@ -39,6 +40,7 @@ public class UserRepository : GenericRepository<User>, IUserRepository
         {
             return await Context.Users
                 .Include(u => u.Role)
+                .Include(u => u.Company)
                 .Include(u => u.Department)
                 .Include(u => u.Designation)
                 .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
@@ -94,6 +96,7 @@ public class UserRepository : GenericRepository<User>, IUserRepository
         {
             var users = Context.Users
                 .Include(u => u.Role)
+                .Include(u => u.Company)
                 .Include(u => u.Department)
                 .Include(u => u.Designation)
                 .Include(u => u.Manager)
@@ -116,6 +119,7 @@ public class UserRepository : GenericRepository<User>, IUserRepository
         {
             return await Context.Users
                 .Include(u => u.Role)
+                .Include(u => u.Company)
                 .Include(u => u.Department)
                 .Where(u => u.ReportsTo == managerUserId)
                 .AsNoTracking()
@@ -133,6 +137,7 @@ public class UserRepository : GenericRepository<User>, IUserRepository
         try
         {
             return await Context.Users
+                .Include(u => u.Company)
                 .Include(u => u.Department)
                 .Include(u => u.Designation)
                 .Where(u => u.RoleId == roleId)
@@ -152,6 +157,7 @@ public class UserRepository : GenericRepository<User>, IUserRepository
         {
             return await Context.Users
                 .Include(u => u.Role)
+                .Include(u => u.Company)
                 .Include(u => u.Designation)
                 .Where(u => u.DepartmentId == departmentId)
                 .AsNoTracking()
@@ -187,6 +193,7 @@ public class UserRepository : GenericRepository<User>, IUserRepository
 
             return await Context.Users
                 .Include(u => u.Role)
+                .Include(u => u.Company)
                 .Include(u => u.Department)
                 .Include(u => u.Designation)
                 .Where(u => u.IsActive && roleNameSet.Contains(u.Role.RoleName.ToLower()))

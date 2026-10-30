@@ -12,6 +12,8 @@ public class UserDto
     public string Email { get; set; } = string.Empty;
     public int RoleId { get; set; }
     public string RoleName { get; set; } = string.Empty;
+    public int? CompanyId { get; set; }
+    public string? CompanyName { get; set; }
     public int? DepartmentId { get; set; }
     public string? DepartmentName { get; set; }
     public int? DesignationId { get; set; }
@@ -42,6 +44,8 @@ public class CreateUserDto
     [Required]
     public int RoleId { get; set; }
 
+    public int? CompanyId { get; set; }
+
     public int? DepartmentId { get; set; }
 
     public int? DesignationId { get; set; }
@@ -64,6 +68,8 @@ public class UpdateUserDto
     [Required]
     public int RoleId { get; set; }
 
+    public int? CompanyId { get; set; }
+
     public int? DepartmentId { get; set; }
 
     public int? DesignationId { get; set; }
@@ -82,6 +88,7 @@ public class UserSearchDto
 {
     public string? Keyword { get; set; }
     public int? RoleId { get; set; }
+    public int? CompanyId { get; set; }
     public int? DepartmentId { get; set; }
     public bool? IsActive { get; set; }
     public int PageNumber { get; set; } = 1;

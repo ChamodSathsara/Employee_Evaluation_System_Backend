@@ -11,6 +11,7 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
+    public DbSet<Company> Companies => Set<Company>();
     public DbSet<Department> Departments => Set<Department>();
     public DbSet<Designation> Designations => Set<Designation>();
     public DbSet<EvaluationPeriod> EvaluationPeriods => Set<EvaluationPeriod>();

@@ -17,6 +17,7 @@ public class UserService : IUserService
 {
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
+    private readonly IGenericRepository<Company> _companyRepository;
     private readonly IDepartmentRepository _departmentRepository;
     private readonly IDesignationRepository _designationRepository;
     private readonly IKPIAssignmentRepository _kpiAssignmentRepository;
@@ -28,6 +29,7 @@ public class UserService : IUserService
     public UserService(
         IUserRepository userRepository,
         IRoleRepository roleRepository,
+        IGenericRepository<Company> companyRepository,
         IDepartmentRepository departmentRepository,
         IDesignationRepository designationRepository,
         IKPIAssignmentRepository kpiAssignmentRepository,
@@ -38,6 +40,7 @@ public class UserService : IUserService
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
+        _companyRepository = companyRepository;
         _departmentRepository = departmentRepository;
         _designationRepository = designationRepository;
         _kpiAssignmentRepository = kpiAssignmentRepository;
@@ -64,6 +67,11 @@ public class UserService : IUserService
         if (search.RoleId.HasValue)
         {
             query = query.Where(u => u.RoleId == search.RoleId.Value);
+        }
+
+        if (search.CompanyId.HasValue)
+        {
+            query = query.Where(u => u.CompanyId == search.CompanyId.Value);
         }
 
         if (search.DepartmentId.HasValue)
@@ -134,6 +142,11 @@ public class UserService : IUserService
         var role = await _roleRepository.GetByIdAsync(request.RoleId)
             ?? throw new NotFoundException("Role", request.RoleId);
 
+        if (request.CompanyId.HasValue && await _companyRepository.GetByIdAsync(request.CompanyId.Value) is null)
+        {
+            throw new NotFoundException("Company", request.CompanyId.Value);
+        }
+
         if (request.DepartmentId.HasValue && !await _departmentRepository.ExistsAsync(request.DepartmentId.Value))
         {
             throw new NotFoundException("Department", request.DepartmentId.Value);
@@ -173,6 +186,11 @@ public class UserService : IUserService
 
         var role = await _roleRepository.GetByIdAsync(request.RoleId)
             ?? throw new NotFoundException("Role", request.RoleId);
+
+        if (request.CompanyId.HasValue && await _companyRepository.GetByIdAsync(request.CompanyId.Value) is null)
+        {
+            throw new NotFoundException("Company", request.CompanyId.Value);
+        }
 
         if (request.DepartmentId.HasValue && !await _departmentRepository.ExistsAsync(request.DepartmentId.Value))
         {

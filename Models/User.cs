@@ -9,6 +9,7 @@ public class User
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public int RoleId { get; set; }
+    public int? CompanyId { get; set; }
     public int? DepartmentId { get; set; }
     public int? DesignationId { get; set; }
     public int? ReportsTo { get; set; }
@@ -22,6 +23,7 @@ public class User
 
     // Navigation properties
     public Role Role { get; set; } = null!;
+    public Company? Company { get; set; }
     public Department? Department { get; set; }
     public Designation? Designation { get; set; }
     public User? Manager { get; set; }
