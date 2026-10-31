@@ -42,15 +42,18 @@ public class BulkImportService : IBulkImportService
             "DesignationName");
         var userRows = ReadRows(userSheet,
             "EmployeeNo", "FirstName", "LastName", "Email", "Password", "RoleName",
-            "DepartmentName", "DesignationName", "ReportedSupervisorEmployeeNo",
+            "CompanyName", "DepartmentName", "DesignationName", "ReportedSupervisorEmployeeNo",
             "ReportedHodEmployeeNo", "IsActive");
 
         var errors = new List<string>();
+        var existingCompanies = await _context.Companies.ToListAsync();
         var existingDepartments = await _context.Departments.ToListAsync();
         var existingDesignations = await _context.Designations.ToListAsync();
         var existingUsers = await _context.Users.Include(u => u.Role).ToListAsync();
         var roles = await _context.Roles.ToListAsync();
 
+        var companies = existingCompanies.ToDictionary(
+            c => c.CompanyName, StringComparer.OrdinalIgnoreCase);
         var departments = existingDepartments.ToDictionary(
             d => d.DepartmentName, StringComparer.OrdinalIgnoreCase);
         var designations = existingDesignations.ToDictionary(
@@ -116,6 +119,7 @@ public class BulkImportService : IBulkImportService
             var email = row.Value("Email").Trim();
             var password = row.Value("Password");
             var roleName = row.Value("RoleName").Trim();
+            var companyName = row.Value("CompanyName").Trim();
             var departmentName = NullIfWhiteSpace(row.Value("DepartmentName"));
             var designationName = NullIfWhiteSpace(row.Value("DesignationName"));
             var supervisorEmployeeNo = NullIfWhiteSpace(row.Value("ReportedSupervisorEmployeeNo"));
@@ -124,9 +128,10 @@ public class BulkImportService : IBulkImportService
 
             if (string.IsNullOrWhiteSpace(employeeNo) || string.IsNullOrWhiteSpace(firstName) ||
                 string.IsNullOrWhiteSpace(lastName) || string.IsNullOrWhiteSpace(email) ||
-                string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(roleName))
+                string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(roleName) ||
+                string.IsNullOrWhiteSpace(companyName))
             {
-                errors.Add($"Users row {row.RowNumber}: EmployeeNo, FirstName, LastName, Email, Password and RoleName are required.");
+                errors.Add($"Users row {row.RowNumber}: EmployeeNo, FirstName, LastName, Email, Password, RoleName and CompanyName are required.");
                 continue;
             }
             if (employeeNo.Length > 50 || firstName.Length > 100 || lastName.Length > 100 || email.Length > 150)
@@ -160,6 +165,12 @@ public class BulkImportService : IBulkImportService
                 continue;
             }
 
+            if (!companies.TryGetValue(companyName, out var company))
+            {
+                errors.Add($"Users row {row.RowNumber}: company '{companyName}' was not found in the database.");
+                continue;
+            }
+
             Department? department = null;
             if (departmentName is not null && !departments.TryGetValue(departmentName, out department))
             {
@@ -189,6 +200,7 @@ public class BulkImportService : IBulkImportService
                 Email = email,
                 PasswordHash = _passwordHasher.Hash(password),
                 Role = role,
+                Company = company,
                 Department = department,
                 Designation = designation,
                 IsActive = isActive,
