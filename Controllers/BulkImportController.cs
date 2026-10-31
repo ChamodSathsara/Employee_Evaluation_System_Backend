@@ -18,7 +18,7 @@ public class BulkImportController : BaseApiController
         _bulkImportService = bulkImportService;
     }
 
-    /// <summary>Imports Departments, Designations, and Users from a three-sheet Excel workbook.</summary>
+    /// <summary>Imports companies, departments, designations, and users from one Employee Import worksheet.</summary>
     [HttpPost("excel")]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> ImportExcel(IFormFile file)

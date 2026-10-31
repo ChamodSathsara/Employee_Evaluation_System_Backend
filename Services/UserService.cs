@@ -342,11 +342,6 @@ public class UserService : IUserService
                 "An Employee must have at least one of ReportedSupervisorId or ReportedHodId.");
         }
 
-        if (roleName == RoleNames.Supervisor && !reportedHodId.HasValue)
-        {
-            throw new ValidationAppException("A Supervisor must have a ReportedHodId.");
-        }
-
         if (reportedSupervisorId.HasValue)
         {
             var supervisor = await _userRepository.GetByIdWithDetailsAsync(reportedSupervisorId.Value)

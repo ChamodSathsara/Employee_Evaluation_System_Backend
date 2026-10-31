@@ -32,14 +32,7 @@ public class BulkImportService : IBulkImportService
         }
 
         using var workbook = new XLWorkbook(excelStream);
-        var departmentSheet = RequireSheet(workbook, "Departments");
-        var designationSheet = RequireSheet(workbook, "Designations");
-        var userSheet = RequireSheet(workbook, "Users");
-
-        var departmentRows = ReadRows(departmentSheet,
-            "DepartmentName", "Description");
-        var designationRows = ReadRows(designationSheet,
-            "DesignationName");
+        var userSheet = GetImportSheet(workbook);
         var userRows = ReadRows(userSheet,
             "EmployeeNo", "FirstName", "LastName", "Email", "Password", "RoleName",
             "CompanyName", "DepartmentName", "DesignationName", "ReportedSupervisorEmployeeNo",
@@ -64,47 +57,59 @@ public class BulkImportService : IBulkImportService
         var existingEmails = existingUsers.Select(u => u.Email)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
+        var newCompanies = new List<Company>();
         var newDepartments = new List<Department>();
-        foreach (var row in departmentRows)
-        {
-            var name = row.Value("DepartmentName").Trim();
-            var description = NullIfWhiteSpace(row.Value("Description"));
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                errors.Add($"Departments row {row.RowNumber}: DepartmentName is required.");
-                continue;
-            }
-            if (name.Length > 100 || (description?.Length ?? 0) > 255)
-            {
-                errors.Add($"Departments row {row.RowNumber}: field length exceeds the allowed limit.");
-                continue;
-            }
-            if (departments.ContainsKey(name)) continue;
-
-            var department = new Department { DepartmentName = name, Description = description };
-            departments[name] = department;
-            newDepartments.Add(department);
-        }
-
         var newDesignations = new List<Designation>();
-        foreach (var row in designationRows)
-        {
-            var name = row.Value("DesignationName").Trim();
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                errors.Add($"Designations row {row.RowNumber}: DesignationName is required.");
-                continue;
-            }
-            if (name.Length > 100)
-            {
-                errors.Add($"Designations row {row.RowNumber}: DesignationName exceeds 100 characters.");
-                continue;
-            }
-            if (designations.ContainsKey(name)) continue;
 
-            var designation = new Designation { DesignationName = name };
-            designations[name] = designation;
-            newDesignations.Add(designation);
+        // The single-sheet template is the source of master data. Existing records are
+        // reused case-insensitively; missing companies/departments/designations are created.
+        foreach (var row in userRows)
+        {
+            var companyName = row.Value("CompanyName").Trim();
+            var departmentName = NullIfWhiteSpace(row.Value("DepartmentName"));
+            var designationName = NullIfWhiteSpace(row.Value("DesignationName"));
+
+            if (!string.IsNullOrWhiteSpace(companyName) && !companies.ContainsKey(companyName))
+            {
+                if (companyName.Length > 150)
+                {
+                    errors.Add($"Employee Import row {row.RowNumber}: CompanyName exceeds 150 characters.");
+                }
+                else
+                {
+                    var company = new Company { CompanyName = companyName };
+                    companies[companyName] = company;
+                    newCompanies.Add(company);
+                }
+            }
+
+            if (departmentName is not null && !departments.ContainsKey(departmentName))
+            {
+                if (departmentName.Length > 100)
+                {
+                    errors.Add($"Employee Import row {row.RowNumber}: DepartmentName exceeds 100 characters.");
+                }
+                else
+                {
+                    var department = new Department { DepartmentName = departmentName };
+                    departments[departmentName] = department;
+                    newDepartments.Add(department);
+                }
+            }
+
+            if (designationName is not null && !designations.ContainsKey(designationName))
+            {
+                if (designationName.Length > 100)
+                {
+                    errors.Add($"Employee Import row {row.RowNumber}: DesignationName exceeds 100 characters.");
+                }
+                else
+                {
+                    var designation = new Designation { DesignationName = designationName };
+                    designations[designationName] = designation;
+                    newDesignations.Add(designation);
+                }
+            }
         }
 
         var importedUserRows = new List<(ExcelRow Row, User User, string RoleName,
@@ -185,10 +190,9 @@ public class BulkImportService : IBulkImportService
                 continue;
             }
 
-            var isActive = true;
-            if (isActiveText is not null && !bool.TryParse(isActiveText, out isActive))
+            if (!TryParseIsActive(isActiveText, out var isActive))
             {
-                errors.Add($"Users row {row.RowNumber}: IsActive must be TRUE or FALSE.");
+                errors.Add($"Users row {row.RowNumber}: IsActive must be TRUE, FALSE, 1, or 0.");
                 continue;
             }
 
@@ -213,21 +217,42 @@ public class BulkImportService : IBulkImportService
 
         foreach (var item in importedUserRows)
         {
-            User? supervisor = null;
-            User? hod = null;
+            User? firstReference = null;
+            User? secondReference = null;
 
             if (item.SupervisorEmployeeNo is not null &&
-                !usersByEmployeeNo.TryGetValue(item.SupervisorEmployeeNo, out supervisor))
+                !usersByEmployeeNo.TryGetValue(item.SupervisorEmployeeNo, out firstReference))
             {
                 errors.Add($"Users row {item.Row.RowNumber}: reported supervisor '{item.SupervisorEmployeeNo}' was not found.");
                 continue;
             }
 
             if (item.HodEmployeeNo is not null &&
-                !usersByEmployeeNo.TryGetValue(item.HodEmployeeNo, out hod))
+                !usersByEmployeeNo.TryGetValue(item.HodEmployeeNo, out secondReference))
             {
                 errors.Add($"Users row {item.Row.RowNumber}: reported HOD '{item.HodEmployeeNo}' was not found.");
                 continue;
+            }
+
+            // Dependency-sorted source files sometimes repeat a HOD/CEO in both reporting
+            // columns. Use the referenced user's actual role to normalize the two links.
+            var references = new[] { firstReference, secondReference }
+                .Where(u => u is not null)
+                .DistinctBy(u => u!.EmployeeNo)
+                .ToList();
+            var supervisor = references.FirstOrDefault(u => u!.Role.RoleName == RoleNames.Supervisor);
+            var hod = references.FirstOrDefault(u => u!.Role.RoleName == RoleNames.HOD);
+
+            if (item.RoleName == RoleNames.CEO)
+            {
+                supervisor = null;
+                hod = null;
+            }
+            else if (item.RoleName == RoleNames.HOD)
+            {
+                // The new model intentionally has no CEO reporting field for HOD users.
+                supervisor = null;
+                hod = null;
             }
 
             if (item.RoleName == RoleNames.Employee && supervisor is null && hod is null)
@@ -235,17 +260,6 @@ public class BulkImportService : IBulkImportService
                 errors.Add($"Users row {item.Row.RowNumber}: an Employee must have at least one reported Supervisor or HOD.");
                 continue;
             }
-            if (supervisor is not null && supervisor.Role.RoleName != RoleNames.Supervisor)
-            {
-                errors.Add($"Users row {item.Row.RowNumber}: ReportedSupervisorEmployeeNo must reference a Supervisor.");
-                continue;
-            }
-            if (hod is not null && hod.Role.RoleName != RoleNames.HOD)
-            {
-                errors.Add($"Users row {item.Row.RowNumber}: ReportedHodEmployeeNo must reference an HOD.");
-                continue;
-            }
-
             item.User.ReportedSupervisor = supervisor;
             item.User.ReportedHod = hod;
         }
@@ -258,18 +272,21 @@ public class BulkImportService : IBulkImportService
         await using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
+            await _context.Companies.AddRangeAsync(newCompanies);
             await _context.Departments.AddRangeAsync(newDepartments);
             await _context.Designations.AddRangeAsync(newDesignations);
             await _context.Users.AddRangeAsync(importedUserRows.Select(x => x.User));
             await _context.SaveChangesAsync();
 
             var adminId = _currentUserService.UserId ?? 0;
-            var auditLogs = newDepartments.Select(d => new AuditLog
+            var auditLogs = newCompanies.Select(c => new AuditLog
+                { UserId = adminId, Action = "Create", TableName = "Companies", RecordId = c.CompanyId, CreatedDate = DateTime.UtcNow })
+                .Concat(newDepartments.Select(d => new AuditLog
                 { UserId = adminId, Action = "Create", TableName = "Departments", RecordId = d.DepartmentId, CreatedDate = DateTime.UtcNow })
                 .Concat(newDesignations.Select(d => new AuditLog
                 { UserId = adminId, Action = "Create", TableName = "Designations", RecordId = d.DesignationId, CreatedDate = DateTime.UtcNow }))
                 .Concat(importedUserRows.Select(x => new AuditLog
-                { UserId = adminId, Action = "Create", TableName = "Users", RecordId = x.User.UserId, CreatedDate = DateTime.UtcNow }));
+                { UserId = adminId, Action = "Create", TableName = "Users", RecordId = x.User.UserId, CreatedDate = DateTime.UtcNow })));
             await _context.AuditLogs.AddRangeAsync(auditLogs);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -282,19 +299,28 @@ public class BulkImportService : IBulkImportService
 
         return new BulkImportResultDto
         {
+            CompaniesCreated = newCompanies.Count,
             DepartmentsCreated = newDepartments.Count,
             DesignationsCreated = newDesignations.Count,
             UsersCreated = importedUserRows.Count
         };
     }
 
-    private static IXLWorksheet RequireSheet(XLWorkbook workbook, string name)
+    private static IXLWorksheet GetImportSheet(XLWorkbook workbook)
     {
-        if (!workbook.TryGetWorksheet(name, out var worksheet))
+        if (workbook.TryGetWorksheet("Employee Import", out var worksheet) ||
+            workbook.TryGetWorksheet("Users", out worksheet))
         {
-            throw new ValidationAppException($"Required worksheet '{name}' was not found.");
+            return worksheet;
         }
-        return worksheet;
+
+        if (workbook.Worksheets.Count == 1)
+        {
+            return workbook.Worksheet(1);
+        }
+
+        throw new ValidationAppException(
+            "A worksheet named 'Employee Import' or 'Users' is required.");
     }
 
     private static List<ExcelRow> ReadRows(IXLWorksheet sheet, params string[] requiredHeaders)
@@ -317,14 +343,28 @@ public class BulkImportService : IBulkImportService
             .ToList();
     }
 
-    private static bool IsValidHierarchy(string roleName, string? managerRole) => roleName switch
+    private static bool TryParseIsActive(string? value, out bool isActive)
     {
-        RoleNames.Admin or RoleNames.CEO => managerRole is null,
-        RoleNames.Manager or RoleNames.HOD => managerRole == RoleNames.CEO,
-        RoleNames.Supervisor => managerRole == RoleNames.HOD,
-        RoleNames.Employee => managerRole is RoleNames.Supervisor or RoleNames.HOD,
-        _ => false
-    };
+        if (value is null)
+        {
+            isActive = true;
+            return true;
+        }
+
+        if (value == "1")
+        {
+            isActive = true;
+            return true;
+        }
+
+        if (value == "0")
+        {
+            isActive = false;
+            return true;
+        }
+
+        return bool.TryParse(value, out isActive);
+    }
 
     private static string? NullIfWhiteSpace(string value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
